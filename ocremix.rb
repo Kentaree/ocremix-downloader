@@ -57,7 +57,7 @@ end
       result = http.get(path)
       filename = sprintf("OCR%05d-%s",i,CGI::unescape(File.basename(path)))
       puts "Saving to filename #{filename}" if options.verbose
-      open(filename,"w") do |file|
+      open(filename,"wb") do |file|
         file.write(result.body)
       end
       digest = Digest::MD5.hexdigest(File.read(filename))
