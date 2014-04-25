@@ -7,6 +7,7 @@ require 'net/http'
 require 'digest/md5'
 require 'cgi'
 require 'peach'
+require 'open-uri'
 
 ConfigFile = File.expand_path("~/.ocr_downloader.conf")
 BaseUrl = "http://ocremix.org/remix/OCR"
@@ -14,12 +15,14 @@ BaseUrl = "http://ocremix.org/remix/OCR"
 options = OpenStruct.new
 options.verbose = false
 options.processes = 1
+options.ocr_nums = false
 
 opts = OptionParser.new do |opts|
   opts.on('-f', '--from [START]', Integer, 'Start song to download') { |from| options.from = from }
   opts.on('-t', '--to END', Integer, 'Last song to download') { |to| options.to = to }
   opts.on('-v', '--[no-]verbose', 'Output debug info') { |v| options.verbose = v }
   opts.on('-p', '--processes [COUNT]', Integer, 'Amount of processes to use') { |p| options.processes = p }
+  opts.on('-n', '--processes [COUNT]', 'Prepend OCR number to filename') { |n| options.ocr_nums = true }
 end 
 
 opts.parse!
@@ -34,8 +37,7 @@ end
 (options.from..options.to).to_a.peach(options.processes) do |i|
   url = sprintf("%s%05d/",BaseUrl,i)
   puts url if options.verbose
-  uri = URI.parse(url)
-  result = Net::HTTP.get(uri)
+  result = open(url){|f|f.read}
   matches = result.scan(/MD5 Checksum: <\/strong>([^<]+)</)
   if matches == nil || matches[0] == nil
     puts sprintf("Skipping OCR%05d",i) if options.verbose
@@ -55,7 +57,11 @@ end
     scheme, userinfo, host, port, registry, path, opaque, query, fragment = URI::split(url)
     Net::HTTP.start(host) do |http|
       result = http.get(path)
-      filename = sprintf("OCR%05d-%s",i,CGI::unescape(File.basename(path)))
+	  if options.ocr_nums
+		filename = sprintf("OCR%05d-%s",i,CGI::unescape(File.basename(path)))
+	  else
+		filename = sprintf(CGI::unescape(File.basename(path)))
+	  end
       puts "Saving to filename #{filename}" if options.verbose
       open(filename,"wb") do |file|
         file.write(result.body)
