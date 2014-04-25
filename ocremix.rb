@@ -7,6 +7,7 @@ require 'net/http'
 require 'digest/md5'
 require 'cgi'
 require 'peach'
+require 'open-uri'
 
 ConfigFile = File.expand_path("~/.ocr_downloader.conf")
 BaseUrl = "http://ocremix.org/remix/OCR"
@@ -34,8 +35,7 @@ end
 (options.from..options.to).to_a.peach(options.processes) do |i|
   url = sprintf("%s%05d/",BaseUrl,i)
   puts url if options.verbose
-  uri = URI.parse(url)
-  result = Net::HTTP.get(uri)
+  result = open(url){|f|f.read}
   matches = result.scan(/MD5 Checksum: <\/strong>([^<]+)</)
   if matches == nil || matches[0] == nil
     puts sprintf("Skipping OCR%05d",i) if options.verbose
